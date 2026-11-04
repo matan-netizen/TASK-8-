@@ -55,6 +55,8 @@ flowchart LR
 ## 5. הקמה מאפס (אם צריך לבנות מחדש)
 
 1. ב-Railway: New Project, ואז Deploy from GitHub repo, ובוחרים `matan-netizen/TASK-8-` (ענף `main`).
+   - **חשוב להעלאה אוטומטית:** אפליקציית Railway בגיטהאב צריכה גישה למאגר (https://github.com/settings/installations, ואז Railway). בלי זה Railway לא מקבל הודעה על מיזוגים, וצריך להפעיל כל העלאה ידנית.
+   - ב-Settings, תחת Source: מוודאים שהענף הוא `main` ושההעלאה האוטומטית מופעלת. אפשר להפעיל גם **Wait for CI**, כדי שגרסה תעלה רק אחרי שהבדיקות בגיטהאב עברו.
 2. בשירות שנוצר: מוסיפים Volume עם mount path ‏`/data`.
 3. בלשונית Variables: `DATA_DIR=/data/db`, ואם רוצים AI אמיתי גם `ANTHROPIC_API_KEY`.
 4. ב-Settings: מגדירים Healthcheck Path ל-`/api/health`.
