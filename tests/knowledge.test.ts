@@ -122,6 +122,15 @@ describe("knowledge in the task workflow", () => {
     expect(r.reply.content).toContain("משפחות צעירות");
   });
 
+  it("does not cite documents when the task itself answers the question", async () => {
+    const { task } = await createTask(manager, { description: "תכין הודעה על פרויקט שקד עד יום חמישי" });
+    await assignTask(manager, task.id, { assigneeId: "e1" });
+    const r = await sendMessage(employee, task.id, { message: "עד מתי צריך לסיים?" });
+    expect(r.reply.content).toContain("חמישי");
+    expect(r.reply.sources).toEqual([]);
+    expect(r.reply.content).not.toContain("מאגר המידע");
+  });
+
   it("restricts knowledge browsing and search to managers", async () => {
     await expect(getKnowledgeOverview(employee)).rejects.toMatchObject({ status: 403 });
     await expect(searchKnowledgeBase(employee, { q: "קהל" })).rejects.toMatchObject({ status: 403 });

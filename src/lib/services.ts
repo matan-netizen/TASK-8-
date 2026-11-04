@@ -338,7 +338,7 @@ export async function sendMessage(
     authorId: null,
     content: ai.value,
     source: ai.source,
-    sources: toSources(hits),
+    sources: ai.usedKnowledge === false ? [] : toSources(hits),
     createdAt: now(),
   };
   await mutate((db) => {

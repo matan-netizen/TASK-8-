@@ -97,8 +97,10 @@ export function AppHeader({
   homeHref: string;
   extra?: ReactNode;
 }) {
+  // No backdrop-blur on the header: a backdrop-filter makes it the containing
+  // block of fixed-position children, which pinned the "בוצע!" toast to the top.
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
         <Link href={homeHref} className="text-lg font-bold text-indigo-700">
           משימה 8
