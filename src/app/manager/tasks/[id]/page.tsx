@@ -10,12 +10,13 @@ import {
   Card,
   ErrorBox,
   Spinner,
+  SourcesList,
   StatusBadge,
   inputClass,
   primaryBtn,
   secondaryBtn,
 } from "@/components/ui";
-import { NotificationsBell } from "@/components/NotificationsBell";
+import { ManagerNav } from "@/components/ManagerNav";
 import { ChatPanel } from "@/components/ChatPanel";
 
 type Form = {
@@ -28,6 +29,7 @@ type Form = {
   priority: Priority | "";
   clarificationQuestions: string;
   managerNotes: string;
+  projectId: string;
 };
 
 const toForm = (t: Task): Form => ({
@@ -40,6 +42,7 @@ const toForm = (t: Task): Form => ({
   priority: t.priority ?? "",
   clarificationQuestions: t.clarificationQuestions.join("\n"),
   managerNotes: t.managerNotes,
+  projectId: t.projectId ?? "",
 });
 
 const lines = (s: string) =>
@@ -72,6 +75,7 @@ function ManagerTaskPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [projects, setProjects] = useState<{ name: string; docs: number }[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -85,6 +89,9 @@ function ManagerTaskPage() {
       setAssignee(t.task.assigneeId ?? "");
       setEmployees(u.users.filter((x) => x.role === "employee"));
       setLoadError(null);
+      api<{ projects: { name: string; docs: number }[] }>("/api/knowledge/projects")
+        .then((k) => setProjects(k.projects))
+        .catch(() => undefined);
     } catch (e) {
       setLoadError((e as Error).message);
     }
@@ -123,6 +130,7 @@ function ManagerTaskPage() {
           priority: form.priority || null,
           clarificationQuestions: lines(form.clarificationQuestions),
           managerNotes: form.managerNotes,
+          projectId: form.projectId || null,
         },
       });
       setTask(r.task);
@@ -166,7 +174,7 @@ function ManagerTaskPage() {
         aiMode={aiMode}
         onLogout={logout}
         homeHref="/manager"
-        extra={user && <NotificationsBell onNew={load} />}
+        extra={user && <ManagerNav onNew={load} />}
       />
       <main className="mx-auto w-full max-w-6xl px-4 py-6">
         <Link href="/manager" className="text-sm text-indigo-700 hover:underline">
@@ -207,6 +215,11 @@ function ManagerTaskPage() {
                   </p>
                 )}
 
+                {task.knowledgeSources.length > 0 && (
+                  <div className="mb-4">
+                    <SourcesList sources={task.knowledgeSources} label="ה-AI נעזר במסמכים מהמאגר" />
+                  </div>
+                )}
                 <details className="mb-4 rounded-lg bg-slate-50 p-3 text-sm">
                   <summary className="cursor-pointer font-medium text-slate-700">הבקשה המקורית שלך</summary>
                   <p className="mt-2 whitespace-pre-wrap text-slate-600">{task.rawDescription}</p>
@@ -252,6 +265,19 @@ function ManagerTaskPage() {
                       </select>
                     </Field>
                   </div>
+                  <Field label="פרויקט במאגר המידע" hint="משפיע על המסמכים שהצ'אט נעזר בהם">
+                    <select className={inputClass} value={form.projectId} onChange={(e) => set("projectId", e.target.value)}>
+                      <option value="">כל המאגר</option>
+                      {form.projectId && !projects.some((p) => p.name === form.projectId) && (
+                        <option value={form.projectId}>{form.projectId} (לא נמצא במאגר)</option>
+                      )}
+                      {projects.map((p) => (
+                        <option key={p.name} value={p.name}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
                   <Field label="שאלות הבהרה פתוחות" hint="גלוי רק למנהל · שאלה בכל שורה">
                     <textarea rows={3} className={inputClass} value={form.clarificationQuestions} onChange={(e) => set("clarificationQuestions", e.target.value)} />
                   </Field>

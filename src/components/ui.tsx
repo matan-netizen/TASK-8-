@@ -134,3 +134,32 @@ export const primaryBtn =
 
 export const secondaryBtn =
   "rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50";
+
+/** Titles of knowledge-base documents used as context (never their content). */
+export function SourcesList({
+  sources,
+  label = "מקורות ממאגר המידע",
+  compact = false,
+}: {
+  sources: { docId: string; title: string; project: string }[] | undefined;
+  label?: string;
+  compact?: boolean;
+}) {
+  if (!sources?.length) return null;
+  return (
+    <div className={compact ? "mt-2 border-t border-slate-100 pt-1.5" : ""}>
+      <div className={`font-medium text-slate-500 ${compact ? "text-[10px]" : "text-sm"}`}>📚 {label}</div>
+      <ul className={`flex flex-wrap gap-1.5 ${compact ? "mt-1" : "mt-1.5"}`}>
+        {sources.map((s) => (
+          <li
+            key={s.docId}
+            title={s.project}
+            className={`rounded-md bg-violet-50 text-violet-800 ring-1 ring-violet-200 ${compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-xs"}`}
+          >
+            {s.title}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

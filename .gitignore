@@ -45,3 +45,6 @@ next-env.d.ts
 /data
 .env*.local
 .env
+
+# knowledge base: real client documents stay local, never in git
+/knowledge

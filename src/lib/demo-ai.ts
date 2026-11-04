@@ -1,5 +1,6 @@
 import type { ChatChannel, Priority, TaskDraft } from "./types";
 import type { ChatContextTask } from "./ai";
+import type { KnowledgeHit } from "./knowledge";
 
 /**
  * Deterministic "demo mode" stand-ins for the language model, used when no
@@ -42,6 +43,7 @@ const DELIVERABLES: Array<[RegExp, string]> = [
   [/תוכנית|תכנית|plan/i, "תוכנית עבודה כתובה"],
   [/רשימה|list/i, "רשימה מסודרת"],
   [/הצעת\s+מחיר/, "הצעת מחיר"],
+  [/הודעות|הודעה|פוסט|מודעה|מודעות|SMS|סמס/i, "טקסט הודעות / מודעות"],
 ];
 
 export function extractDeliverable(text: string): string | null {
@@ -64,7 +66,7 @@ function cleanTitle(text: string, deadline: string | null): string {
   return t;
 }
 
-export function demoAnalyze(raw: string): TaskDraft {
+export function demoAnalyze(raw: string, knowledge: KnowledgeHit[] = []): TaskDraft {
   const text = raw.trim();
   const deadline = extractDeadline(text);
   const priority = extractPriority(text);
@@ -82,8 +84,10 @@ export function demoAnalyze(raw: string): TaskDraft {
     ? `${deliverableLabel}, בהתאם לבקשת המנהל`
     : "לא צוין תוצר מוגדר — יש לאשר מול המנהל לפני תחילת העבודה";
 
+  const docTitles = [...new Set(knowledge.map((h) => `"${h.title}"`))].slice(0, 3);
   const steps = [
     "לקרוא את תיאור המשימה ולוודא הבנה מלאה של הדרישה",
+    ...(docTitles.length ? [`לעיין בחומרי הרקע במאגר המידע: ${docTitles.join(", ")}`] : []),
     "לאסוף את המידע והחומרים הנדרשים לביצוע",
     "לבצע את המשימה בהתאם להנחיות",
     deliverableLabel ? `להכין את התוצר: ${deliverableLabel}` : "להכין את התוצר שסוכם מול המנהל",
@@ -96,7 +100,8 @@ export function demoAnalyze(raw: string): TaskDraft {
     objective: `להשלים את המשימה: ${title}`,
     instructions:
       `המנהל ביקש: "${text}".\n` +
-      "יש לבצע את המשימה בהתאם לתיאור, לתעד את מה שבוצע, ולפנות למנהל בכל שאלה לגבי פרטים שלא צוינו.",
+      "יש לבצע את המשימה בהתאם לתיאור, לתעד את מה שבוצע, ולפנות למנהל בכל שאלה לגבי פרטים שלא צוינו." +
+      (docTitles.length ? `\nחומרי רקע רלוונטיים במאגר המידע: ${docTitles.join(", ")}.` : ""),
     steps,
     deliverable,
     deadline,
@@ -107,10 +112,18 @@ export function demoAnalyze(raw: string): TaskDraft {
 
 const PRIORITY_LABEL: Record<Priority, string> = { low: "נמוכה", medium: "בינונית", high: "גבוהה" };
 
-export function demoChat(channel: ChatChannel, task: ChatContextTask, message: string): string {
+export function demoChat(
+  channel: ChatChannel,
+  task: ChatContextTask,
+  message: string,
+  knowledge: KnowledgeHit[] = [],
+): string {
   const q = message.trim();
-  if (channel === "employee") return demoEmployeeReply(task, q);
-  return demoManagerReply(task, q);
+  const reply = channel === "employee" ? demoEmployeeReply(task, q) : demoManagerReply(task, q);
+  const top = knowledge[0];
+  if (!top) return reply;
+  const excerpt = top.excerpt.length > 300 ? `${top.excerpt.slice(0, 300).trimEnd()}...` : top.excerpt;
+  return `${reply}\n\nמידע רלוונטי ממאגר המידע (מסמך "${top.title}"):\n${excerpt}`;
 }
 
 function demoEmployeeReply(task: ChatContextTask, q: string): string {

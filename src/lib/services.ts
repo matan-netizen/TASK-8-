@@ -2,6 +2,15 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { mutate, read } from "./store";
 import { analyzeTask, chatReply, type ChatContextTask } from "./ai";
+import {
+  detectProject,
+  getKnowledgeIndex,
+  listProjects,
+  searchKnowledge,
+  toSources,
+  type KnowledgeHit,
+  type KnowledgeIndex,
+} from "./knowledge";
 import { getUser } from "./users";
 import {
   COMPLETION_MESSAGE,
@@ -45,6 +54,8 @@ export const createTaskSchema = z.object({
     .trim()
     .min(3, "תיאור המשימה קצר מדי")
     .max(4000, "תיאור המשימה ארוך מדי (עד 4000 תווים)"),
+  /** Knowledge-base project; omitted = auto-detect, null = whole base. */
+  project: z.string().trim().max(200).nullable().optional(),
 });
 
 const shortText = (label: string, max = 200) =>
@@ -61,6 +72,7 @@ export const updateTaskSchema = z
     priority: z.enum(["low", "medium", "high"]).nullable(),
     clarificationQuestions: z.array(z.string().trim().min(1).max(500)).max(20),
     managerNotes: z.string().max(4000, "ההערות ארוכות מדי"),
+    projectId: z.string().trim().max(200).nullable(),
   })
   .partial();
 
@@ -82,6 +94,56 @@ export function parse<T>(schema: z.ZodType<T>, data: unknown): T {
   return r.data;
 }
 
+// ---------- knowledge base ----------
+
+/** The knowledge base must never break the core workflow. */
+async function safeIndex(): Promise<KnowledgeIndex | null> {
+  try {
+    return await getKnowledgeIndex();
+  } catch (err) {
+    console.error("[knowledge] index unavailable:", err);
+    return null;
+  }
+}
+
+function validProject(index: KnowledgeIndex | null, project: string | null | undefined): string | null {
+  if (!project) return null;
+  if (!index || !listProjects(index).some((p) => p.name === project)) {
+    throw new AppError(400, "הפרויקט שנבחר לא קיים במאגר המידע");
+  }
+  return project;
+}
+
+export async function getKnowledgeOverview(user: User | null) {
+  requireRole(user, "manager");
+  const index = await getKnowledgeIndex();
+  return {
+    isSample: index.isSample,
+    projects: listProjects(index),
+    docs: index.docs,
+    skippedCount: index.skipped.length,
+  };
+}
+
+/** Project names for the task form (available to managers only). */
+export async function getKnowledgeProjects(user: User | null) {
+  requireRole(user, "manager");
+  const index = await safeIndex();
+  return { isSample: index?.isSample ?? false, projects: index ? listProjects(index) : [] };
+}
+
+export const knowledgeSearchSchema = z.object({
+  q: z.string().trim().min(2, "יש להזין לפחות 2 תווים לחיפוש").max(300),
+  project: z.string().trim().max(200).nullable().optional(),
+});
+
+export async function searchKnowledgeBase(user: User | null, input: unknown): Promise<KnowledgeHit[]> {
+  requireRole(user, "manager");
+  const { q, project } = parse(knowledgeSearchSchema, input);
+  const index = await getKnowledgeIndex();
+  return searchKnowledge(index, q, { project: validProject(index, project), limit: 8 });
+}
+
 // ---------- tasks ----------
 
 export async function createTask(
@@ -89,8 +151,12 @@ export async function createTask(
   input: unknown,
 ): Promise<{ task: Task; warning?: string }> {
   const manager = requireRole(user, "manager");
-  const { description } = parse(createTaskSchema, input);
-  const analysis = await analyzeTask(description);
+  const { description, project } = parse(createTaskSchema, input);
+  const index = await safeIndex();
+  const projectId =
+    project === undefined ? (index ? detectProject(index, description) : null) : validProject(index, project);
+  const hits = index ? searchKnowledge(index, description, { project: projectId, limit: 5 }) : [];
+  const analysis = await analyzeTask(description, hits);
   const t = now();
   const task: Task = {
     id: randomUUID(),
@@ -101,6 +167,8 @@ export async function createTask(
     managerNotes: "",
     status: "draft",
     aiSource: analysis.source,
+    projectId,
+    knowledgeSources: toSources(hits),
     createdAt: t,
     updatedAt: t,
     assignedAt: null,
@@ -145,6 +213,7 @@ export async function getTask(user: User | null, id: string): Promise<Task | Emp
 export async function updateTask(user: User | null, id: string, input: unknown): Promise<Task> {
   const manager = requireRole(user, "manager");
   const patch = parse(updateTaskSchema, input);
+  if (patch.projectId !== undefined) patch.projectId = validProject(await safeIndex(), patch.projectId);
   return mutate((db) => {
     const task = findForUser(db.tasks, manager, id);
     if (task.status === "completed") throw new AppError(409, "לא ניתן לערוך משימה שהושלמה");
@@ -251,7 +320,16 @@ export async function sendMessage(
     db.messages.push(userMessage);
   });
 
-  const ai = await chatReply(channel, context, history, message);
+  const index = await safeIndex();
+  // The question itself drives the search; the task title is only a fallback.
+  let hits: KnowledgeHit[] = [];
+  if (index) {
+    hits = searchKnowledge(index, message, { project: task.projectId, limit: 4 });
+    if (!hits.length) {
+      hits = searchKnowledge(index, `${message} ${task.title}`, { project: task.projectId, limit: 4 });
+    }
+  }
+  const ai = await chatReply(channel, context, history, message, hits);
   const reply: ChatMessage = {
     id: randomUUID(),
     taskId,
@@ -260,6 +338,7 @@ export async function sendMessage(
     authorId: null,
     content: ai.value,
     source: ai.source,
+    sources: toSources(hits),
     createdAt: now(),
   };
   await mutate((db) => {

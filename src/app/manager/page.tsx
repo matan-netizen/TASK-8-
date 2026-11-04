@@ -16,7 +16,7 @@ import {
   inputClass,
   primaryBtn,
 } from "@/components/ui";
-import { NotificationsBell } from "@/components/NotificationsBell";
+import { ManagerNav } from "@/components/ManagerNav";
 
 export default function ManagerHome() {
   const router = useRouter();
@@ -28,6 +28,10 @@ export default function ManagerHome() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | Task["status"]>("all");
+  const [projects, setProjects] = useState<{ name: string; docs: number }[]>([]);
+  const [isSample, setIsSample] = useState(false);
+  // "auto" = detect from text, "all" = whole knowledge base, otherwise a project name.
+  const [project, setProject] = useState("auto");
 
   const load = useCallback(async () => {
     try {
@@ -37,6 +41,12 @@ export default function ManagerHome() {
       ]);
       setTasks(t.tasks);
       setEmployees(u.users.filter((x) => x.role === "employee"));
+      api<{ projects: { name: string; docs: number }[]; isSample: boolean }>("/api/knowledge/projects")
+        .then((k) => {
+          setProjects(k.projects);
+          setIsSample(k.isSample);
+        })
+        .catch(() => undefined);
       setLoadError(null);
     } catch (e) {
       setLoadError((e as Error).message);
@@ -59,7 +69,10 @@ export default function ManagerHome() {
     setCreateError(null);
     try {
       const r = await api<{ task: Task; warning?: string }>("/api/tasks", {
-        body: { description },
+        body: {
+          description,
+          ...(project === "auto" ? {} : { project: project === "all" ? null : project }),
+        },
       });
       router.push(`/manager/tasks/${r.task.id}${r.warning ? "?warn=1" : ""}`);
     } catch (err) {
@@ -78,7 +91,7 @@ export default function ManagerHome() {
         aiMode={aiMode}
         onLogout={logout}
         homeHref="/manager"
-        extra={user && <NotificationsBell onNew={load} />}
+        extra={user && <ManagerNav onNew={load} />}
       />
       <main className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6">
         <Card>
@@ -100,6 +113,29 @@ export default function ManagerHome() {
               onChange={(e) => setDescription(e.target.value)}
               disabled={creating}
             />
+            {projects.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <label htmlFor="project" className="text-sm text-slate-700">
+                  📚 הקשר ממאגר המידע:
+                </label>
+                <select
+                  id="project"
+                  className={`${inputClass} w-auto`}
+                  value={project}
+                  onChange={(e) => setProject(e.target.value)}
+                  disabled={creating}
+                >
+                  <option value="auto">זיהוי אוטומטי לפי הטקסט</option>
+                  <option value="all">כל המאגר</option>
+                  {projects.map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.name} ({p.docs})
+                    </option>
+                  ))}
+                </select>
+                {isSample && <span className="text-xs text-amber-700">מאגר דוגמה</span>}
+              </div>
+            )}
             {createError && <ErrorBox message={createError} />}
             <div className="flex items-center gap-3">
               <button type="submit" className={primaryBtn} disabled={creating || !description.trim()}>
