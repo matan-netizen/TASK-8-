@@ -26,6 +26,17 @@ MVP של מערכת לניהול משימות למנהלים ולעובדים, �
 * בניית מערכת המשימות
 ```
 
+## 📘 תיעוד
+
+| נושא | מסמך |
+|---|---|
+| **Design**: ארכיטקטורה, נתונים, תהליכים והחלטות | [docs/design.md](docs/design.md) |
+| **Place**: איפה המערכת רצה (מקומית ו-Railway) | [docs/place.md](docs/place.md) |
+| **Manage**: ניטור, גיבוי, עדכונים ותקלות | [docs/manage.md](docs/manage.md) |
+| **Test / Eval**: בדיקות והערכת איכות ה-AI | [docs/test-eval.md](docs/test-eval.md) |
+
+🌐 **המערכת באוויר:** https://web-production-c4854.up.railway.app
+
 ## מה המערכת עושה
 1. **המנהל** כותב תיאור קצר ולא פורמלי של משימה.
 2. **ה-AI** מנסח ממנו משימה ברורה: כותרת, מטרה, הנחיות, שלבים מוצעים, תוצר מצופה, מועד ועדיפות (רק אם צוינו). אם חסר מידע חיוני, ה-AI מוסיף שאלת הבהרה ולא ממציא פרטים.
@@ -71,6 +82,7 @@ cp .env.example .env.local
 ## בדיקות
 ```bash
 npm test           # בדיקות התהליך המרכזי (vitest)
+npm run eval       # הערכת איכות ה-AI (ראו docs/test-eval.md)
 npm run lint
 npm run build
 npm run typecheck  # אחרי build (או npx next typegen)
