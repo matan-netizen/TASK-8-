@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# משימה 8 — ניהול משימות עם צ'אט חכם
 
-## Getting Started
+MVP של מערכת לניהול משימות למנהלים ולעובדים, עם ממשק בעברית (RTL).
+נבנה עם Next.js, TypeScript ו-Tailwind CSS.
 
-First, run the development server:
+## מה המערכת עושה
+1. **המנהל** כותב תיאור קצר ולא פורמלי של משימה.
+2. **ה-AI** מנסח ממנו משימה ברורה: כותרת, מטרה, הנחיות, שלבים מוצעים, תוצר מצופה, מועד ועדיפות (רק אם צוינו). אם חסר מידע חיוני, ה-AI מוסיף שאלת הבהרה ולא ממציא פרטים.
+3. המנהל עורך את הפרטים ומשייך את המשימה לעובד. אפשר להוסיף **הערות פרטיות** שלא מוצגות לעובד.
+4. **העובד** רואה את המשימה המלאה ויכול להתייעץ בצ'אט חכם שמכיר את הקשר המשימה.
+5. העובד מסמן "בוצעה", והמנהל מקבל התראה בתוך האפליקציה: **"בוצע!"** (פעם אחת בלבד, גם בלחיצות כפולות).
+
+לכל משימה יש שתי שיחות צ'אט נפרדות, אחת למנהל ואחת לעובד. העובד לעולם לא רואה את השיחה של המנהל, את ההערות הפרטיות או את הבקשה המקורית.
+
+## הרצה
+דרישות: Node.js 20 ומעלה.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+פותחים את http://localhost:3000 ובוחרים משתמש דמו (מנהל או עובד). כדי לבדוק את שני הצדדים במקביל, פותחים את העובד בחלון גלישה בסתר.
+
+### הגדרת מפתח API (אופציונלי)
+```bash
+cp .env.example .env.local
+```
+בקובץ `.env.local` מזינים: `ANTHROPIC_API_KEY=sk-ant-...` ומפעילים מחדש את השרת.
+
+המפתח נקרא רק בצד השרת ולא נחשף לדפדפן. **בלי מפתח** המערכת פועלת ב"מצב הדגמה" (מסומן בתג צהוב בכותרת) עם תשובות דטרמיניסטיות, כך שאפשר לבדוק את כל התהליך. אם קריאה ל-API נכשלת, המערכת עוברת למצב הדגמה ומציגה אזהרה.
+
+## בדיקות
+```bash
+npm test           # בדיקות התהליך המרכזי (vitest)
+npm run lint
+npm run build
+npm run typecheck  # אחרי build (או npx next typegen)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## מבנה
+- `src/lib/services.ts`: הלוגיקה העסקית, ההרשאות והוולידציה.
+- `src/lib/ai.ts`: חיבור ל-Anthropic. `src/lib/demo-ai.ts`: מצב ההדגמה.
+- `src/lib/store.ts`: אחסון מקומי בקובץ JSON (`data/db.json`), עם כתיבה אטומית ותור כתיבה.
+- `src/app/api/*`: נקודות הקצה (API).
+- `src/app/manager`, `src/app/employee`: מסכי המנהל והעובד.
+- `tests/workflow.test.ts`: בדיקות התהליך.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## מגבלות
+- אין אימות אמיתי: הכניסה היא בחירת משתמש דמו, שנשמרת ב-cookie.
+- האחסון הוא קובץ JSON מקומי שמתאים לשרת יחיד. לפריסה בענן (למשל Vercel) או בכמה שרתים יש להחליף אותו במסד נתונים.
+- ההתראות מתעדכנות בבדיקה כל 5 שניות, לא בזמן אמת.
