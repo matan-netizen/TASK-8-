@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { ChatMessage, Role } from "@/lib/types";
 import { api, formatDate } from "@/lib/client";
-import { Card, ErrorBox, Spinner, inputClass, primaryBtn } from "./ui";
+import { Card, ErrorBox, SourcesList, Spinner, inputClass, primaryBtn } from "./ui";
 
 const SUGGESTIONS: Record<Role, string[]> = {
   manager: ["מה חסר במשימה?", "איך לשפר את הניסוח?", "סכם לי את המשימה"],
@@ -113,6 +113,7 @@ export function ChatPanel({ taskId, role }: { taskId: string; role: Role }) {
                 {m.sender === "user" ? "את/ה" : `עוזר AI${m.source === "demo" ? " · מצב הדגמה" : ""}`}
               </div>
               <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
+              {m.sender === "assistant" && <SourcesList sources={m.sources} label="נעזר במסמכים" compact />}
               <div
                 className={`mt-1 text-[10px] ${m.sender === "user" ? "text-indigo-200" : "text-slate-400"}`}
               >

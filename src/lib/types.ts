@@ -1,5 +1,12 @@
 export type Role = "manager" | "employee";
 
+/** Reference to a knowledge-base document (title only, never its content). */
+export interface KnowledgeSource {
+  docId: string;
+  title: string;
+  project: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -32,6 +39,10 @@ export interface Task {
   managerNotes: string;
   status: TaskStatus;
   aiSource: AiSource;
+  /** Knowledge-base project this task belongs to, or null for the whole base. */
+  projectId: string | null;
+  /** Knowledge-base documents used as context when the task was drafted. */
+  knowledgeSources: KnowledgeSource[];
   createdAt: string;
   updatedAt: string;
   assignedAt: string | null;
@@ -55,6 +66,8 @@ export interface ChatMessage {
   authorId: string | null;
   content: string;
   source: AiSource | null;
+  /** Knowledge-base documents the assistant drew on for this reply. */
+  sources?: KnowledgeSource[];
   createdAt: string;
 }
 

@@ -23,7 +23,8 @@ async function readDb(): Promise<Database> {
     const raw = await fs.readFile(dataFile(), "utf8");
     const parsed = JSON.parse(raw) as Partial<Database>;
     return {
-      tasks: parsed.tasks ?? [],
+      // Older records predate the knowledge base fields.
+      tasks: (parsed.tasks ?? []).map((t) => ({ ...t, projectId: t.projectId ?? null, knowledgeSources: t.knowledgeSources ?? [] })),
       messages: parsed.messages ?? [],
       notifications: parsed.notifications ?? [],
     };

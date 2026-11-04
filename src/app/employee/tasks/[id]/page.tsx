@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { EmployeeTaskView } from "@/lib/types";
 import { PRIORITY_LABEL, api, formatDate, useSession } from "@/lib/client";
-import { AppHeader, Card, ErrorBox, Spinner, StatusBadge, primaryBtn, secondaryBtn } from "@/components/ui";
+import { AppHeader, Card, ErrorBox, SourcesList, Spinner, StatusBadge, primaryBtn, secondaryBtn } from "@/components/ui";
 import { ChatPanel } from "@/components/ChatPanel";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -110,6 +110,7 @@ export default function EmployeeTaskPage() {
               <Section title="תוצר מצופה">
                 <p className="whitespace-pre-wrap">{task.deliverable}</p>
               </Section>
+              <SourcesList sources={task.knowledgeSources} label="חומרי רקע במאגר המידע" />
 
               <div className="border-t border-slate-100 pt-4">
                 {error && (
