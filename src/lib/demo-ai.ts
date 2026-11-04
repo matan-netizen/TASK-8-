@@ -112,18 +112,35 @@ export function demoAnalyze(raw: string, knowledge: KnowledgeHit[] = []): TaskDr
 
 const PRIORITY_LABEL: Record<Priority, string> = { low: "נמוכה", medium: "בינונית", high: "גבוהה" };
 
+const EMPLOYEE_INTENT =
+  /מתי|דדליין|deadline|מועד|כמה\s+זמן|עדיפות|דחוף|חשוב|תוצר|להגיש|הגשה|deliverable|סיימתי|גמרתי|בוצע|השלמתי|שלב|איך|מאיפה|להתחיל|מה\s+לעשות|הסבר/i;
+const MANAGER_INTENT = /חסר|לשפר|שפר|שיפור|ניסוח|לחדד|בהיר|מתי|מועד|דדליין|עדיפות|דחוף/;
+
+/** Plain-text excerpt for a chat bubble (drops Markdown markers). */
+function cleanExcerpt(text: string, max = 260): string {
+  const plain = text
+    .replace(/^#+\s*/gm, "")
+    .replace(/^\s*[-*]\s+/gm, "• ")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+  return plain.length > max ? `${plain.slice(0, max).trimEnd()}...` : plain;
+}
+
 export function demoChat(
   channel: ChatChannel,
   task: ChatContextTask,
   message: string,
   knowledge: KnowledgeHit[] = [],
-): string {
+): { text: string; usedKnowledge: boolean } {
   const q = message.trim();
   const reply = channel === "employee" ? demoEmployeeReply(task, q) : demoManagerReply(task, q);
+  const specific = (channel === "employee" ? EMPLOYEE_INTENT : MANAGER_INTENT).test(q);
   const top = knowledge[0];
-  if (!top) return reply;
-  const excerpt = top.excerpt.length > 300 ? `${top.excerpt.slice(0, 300).trimEnd()}...` : top.excerpt;
-  return `${reply}\n\nמידע רלוונטי ממאגר המידע (מסמך "${top.title}"):\n${excerpt}`;
+  if (!top || specific) return { text: reply, usedKnowledge: false };
+  return {
+    text: `${reply}\n\nמידע רלוונטי ממאגר המידע (מסמך "${top.title}"):\n${cleanExcerpt(top.excerpt)}`,
+    usedKnowledge: true,
+  };
 }
 
 function demoEmployeeReply(task: ChatContextTask, q: string): string {

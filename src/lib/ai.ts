@@ -35,6 +35,8 @@ export interface AiResult<T> {
   source: AiSource;
   /** Set when the API call failed and the demo fallback was used. */
   warning?: string;
+  /** False when the reply did not draw on the provided knowledge excerpts. */
+  usedKnowledge?: boolean;
 }
 
 const draftSchema = z.object({
@@ -191,8 +193,10 @@ export async function chatReply(
   message: string,
   knowledge: KnowledgeHit[] = [],
 ): Promise<AiResult<string>> {
-  if (aiMode() === "demo")
-    return { value: demoChat(channel, task, message, knowledge), source: "demo" };
+  if (aiMode() === "demo") {
+    const demo = demoChat(channel, task, message, knowledge);
+    return { value: demo.text, source: "demo", usedKnowledge: demo.usedKnowledge };
+  }
   try {
     const res = await client().messages.create({
       model: model(),
@@ -209,7 +213,10 @@ export async function chatReply(
   } catch (err) {
     console.error("[ai] chatReply failed, using demo fallback:", err);
     return {
-      value: demoChat(channel, task, message, knowledge),
+      ...(() => {
+        const demo = demoChat(channel, task, message, knowledge);
+        return { value: demo.text, usedKnowledge: demo.usedKnowledge };
+      })(),
       source: "demo",
       warning: "לא ניתן היה להתחבר למודל השפה — התשובה נוצרה במצב הדגמה.",
     };
