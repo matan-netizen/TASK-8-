@@ -34,8 +34,8 @@ MVP של מערכת לניהול משימות למנהלים ולעובדים, �
 | **Place**: איפה המערכת רצה (מקומית ו-Railway) | [docs/place.md](docs/place.md) |
 | **Manage**: ניטור, גיבוי, עדכונים ותקלות | [docs/manage.md](docs/manage.md) |
 | **Test / Eval**: בדיקות והערכת איכות ה-AI | [docs/test-eval.md](docs/test-eval.md) |
-| **Security**: בדיקת אבטחה לפי OWASP Top 10:2025 ותיקונים | [docs/security.md](docs/security.md) |
-| **סוכן אבטחה (Sentinel)**: סריקת אתרים ושירותים עם Nikto, Bandit ו-Claude | [security-agent/](security-agent/README.md) |
+| **משימה מס' 11 - אבטחה**: בדיקה לפי OWASP Top 10:2025 ותיקונים | [docs/security.md](docs/security.md) |
+| **משימה מס' 11 - אבטחה**: סוכן האבטחה Sentinel, סריקת אתרים ושירותים עם Nikto, Bandit ו-Claude | [security-agent/](security-agent/README.md) |
 
 🌐 **המערכת באוויר:** https://web-production-c4854.up.railway.app
 
