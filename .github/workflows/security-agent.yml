@@ -1,0 +1,67 @@
+name: Security agent (Sentinel)
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  agent-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: security-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Unit tests (vulnerable + hardened test servers)
+        run: python -m unittest discover -s tests -v
+      - name: Bandit on the agent itself
+        run: bandit -r sentinel
+
+  scan-app:
+    needs: agent-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Nikto and Python tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q nikto
+          pip install -r security-agent/requirements.txt
+      - name: Build and start the app
+        run: |
+          npm ci
+          npm run build
+          (npm start -- -p 3000 > app.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf localhost:3000/api/health && break; sleep 1; done
+      - name: Scan with Sentinel
+        working-directory: security-agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python -m sentinel --url http://localhost:3000 --src .. \
+            --login-path /api/session --login-body '{"userId":"m1"}' \
+            --csrf-path /api/session --protected /api/notifications \
+            --forged-cookie "demo_user=m1" --error-path /api/tasks \
+            --out reports/ci --fail-on critical
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentinel-report
+          path: security-agent/reports/ci.*

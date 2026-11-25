@@ -1,0 +1,2 @@
+anthropic>=0.75
+bandit>=1.8
