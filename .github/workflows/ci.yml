@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   pull_request:
   push:
@@ -7,14 +10,22 @@ on:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-permissions:
+  contents: read
+
+on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-versipermissions:
+  contents: read
+
+on: 22
           cache: npm
       - run: npm ci
+      - name: Dependency audit (OWASP A03)
+        run: npm run audit
       - name: Lint
         run: npm run lint
       - name: Type check

@@ -34,6 +34,7 @@ MVP של מערכת לניהול משימות למנהלים ולעובדים, �
 | **Place**: איפה המערכת רצה (מקומית ו-Railway) | [docs/place.md](docs/place.md) |
 | **Manage**: ניטור, גיבוי, עדכונים ותקלות | [docs/manage.md](docs/manage.md) |
 | **Test / Eval**: בדיקות והערכת איכות ה-AI | [docs/test-eval.md](docs/test-eval.md) |
+| **Security**: בדיקת אבטחה לפי OWASP Top 10:2025 ותיקונים | [docs/security.md](docs/security.md) |
 
 🌐 **המערכת באוויר:** https://web-production-c4854.up.railway.app
 
@@ -99,6 +100,6 @@ npm run typecheck  # אחרי build (או npx next typegen)
 - `tests/workflow.test.ts`: בדיקות התהליך.
 
 ## מגבלות
-- אין אימות אמיתי: הכניסה היא בחירת משתמש דמו, שנשמרת ב-cookie.
+- אין חשבונות אמיתיים: הכניסה היא בחירת משתמש דמו. העוגייה חתומה (HMAC), ואפשר לחייב קוד גישה עם `ACCESS_CODE`. ראו [docs/security.md](docs/security.md).
 - האחסון הוא קובץ JSON מקומי שמתאים לשרת יחיד. לפריסה בענן (למשל Vercel) או בכמה שרתים יש להחליף אותו במסד נתונים.
 - ההתראות מתעדכנות בבדיקה כל 5 שניות, לא בזמן אמת.

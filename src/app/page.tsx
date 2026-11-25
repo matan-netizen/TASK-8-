@@ -12,12 +12,19 @@ export default function LoginPage() {
   const [aiMode, setAiMode] = useState<AiSource | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [codeRequired, setCodeRequired] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
 
   useEffect(() => {
-    Promise.all([api<{ users: User[] }>("/api/users"), api<{ aiMode: AiSource }>("/api/status")])
-      .then(([u, s]) => {
+    Promise.all([
+      api<{ users: User[] }>("/api/users"),
+      api<{ aiMode: AiSource }>("/api/status"),
+      api<{ accessCodeRequired: boolean }>("/api/session"),
+    ])
+      .then(([u, s, sess]) => {
         setUsers(u.users);
         setAiMode(s.aiMode);
+        setCodeRequired(sess.accessCodeRequired);
       })
       .catch((e: Error) => setError(e.message));
   }, []);
@@ -26,7 +33,7 @@ export default function LoginPage() {
     setBusy(user.id);
     setError(null);
     try {
-      await api("/api/session", { body: { userId: user.id } });
+      await api("/api/session", { body: { userId: user.id, ...(codeRequired ? { accessCode } : {}) } });
       router.push(user.role === "manager" ? "/manager" : "/employee");
     } catch (e) {
       setError((e as Error).message);
@@ -49,6 +56,22 @@ export default function LoginPage() {
         <p className="mb-4 text-sm text-slate-500">
           זוהי גרסת MVP ללא אימות אמיתי. כל המשתמשים הם <strong>משתמשי דמו</strong> לצורך בדיקה.
         </p>
+        {codeRequired && (
+          <div className="mb-4">
+            <label htmlFor="access-code" className="mb-1 block text-sm font-medium text-slate-700">
+              🔒 קוד גישה
+            </label>
+            <input
+              id="access-code"
+              type="password"
+              autoComplete="current-password"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:w-64"
+              value={accessCode}
+              onChange={(e) => setAccessCode(e.target.value)}
+              placeholder="הזינו את קוד הגישה"
+            />
+          </div>
+        )}
         {error && <ErrorBox message={error} />}
         {!users && !error && <Spinner />}
         <div className="grid gap-3 sm:grid-cols-3">

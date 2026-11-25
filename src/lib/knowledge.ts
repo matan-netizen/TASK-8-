@@ -322,11 +322,20 @@ export function toSources(hits: KnowledgeHit[]): KnowledgeSource[] {
 }
 
 /** Formats hits for a model prompt, clearly delimited as reference data. */
+/**
+ * Prompt-injection hardening (OWASP A05): a document must not be able to
+ * close the <knowledge>/<document> wrapper and "escape" into instructions.
+ */
+export function neutralizeTags(text: string): string {
+  return text.replace(/<\/?\s*(knowledge|document)\b[^>]*>/gi, (m) => m.replace(/</g, "‹").replace(/>/g, "›"));
+}
+
 export function formatForPrompt(hits: KnowledgeHit[], maxChars = 6000): string {
   let total = 0;
   const parts: string[] = [];
   for (const h of hits) {
-    const block = `<document title="${h.title.replace(/"/g, "'")}" project="${h.project.replace(/"/g, "'")}">\n${h.excerpt}\n</document>`;
+    const attr = (v: string) => neutralizeTags(v).replace(/"/g, "'");
+    const block = `<document title="${attr(h.title)}" project="${attr(h.project)}">\n${neutralizeTags(h.excerpt)}\n</document>`;
     if (total + block.length > maxChars) break;
     parts.push(block);
     total += block.length;
