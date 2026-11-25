@@ -85,7 +85,8 @@ cp .env.example .env.local
 
 ## בדיקות
 ```bash
-npm test           # בדיקות התהליך המרכזי (vitest)
+npm test           # בדיקות התהליך המרכזי ובדיקות האבטחה (vitest)
+npm run audit      # סריקת ספריות פגיעות
 npm run eval       # הערכת איכות ה-AI (ראו docs/test-eval.md)
 npm run lint
 npm run build
