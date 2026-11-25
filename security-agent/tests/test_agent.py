@@ -171,6 +171,33 @@ class StaticAnalysis(unittest.TestCase):
         self.assertEqual(ids.get("bandit.B324"), "A04")  # md5
 
 
+class NiktoParsing(unittest.TestCase):
+    """Run the wrapper against a fake nikto binary that writes CSV."""
+
+    def test_csv_rows_become_findings(self):
+        d = tempfile.mkdtemp()
+        fake = Path(d, "nikto")
+        fake.write_text(
+            "#!/usr/bin/env python3\n"
+            "import sys\n"
+            "out = sys.argv[sys.argv.index('-output') + 1]\n"
+            "open(out, 'w').write('\"Nikto - v2.1.5/2.1.5\"\\n'\n"
+            "  '\"localhost\",\"127.0.0.1\",\"80\",\"OSVDB-3092\",\"GET\",\"/admin/\",\"/admin/: This might be interesting...\"\\n'\n"
+            "  '\"localhost\",\"127.0.0.1\",\"80\",\"\",\"GET\",\"/\",\"The anti-clickjacking X-Frame-Options header is not present.\"\\n')\n")
+        fake.chmod(0o755)
+        old = os.environ["PATH"]
+        os.environ["PATH"] = d + os.pathsep + old
+        try:
+            found, msg = tools.nikto("http://localhost")
+        finally:
+            os.environ["PATH"] = old
+            shutil.rmtree(d, ignore_errors=True)
+        self.assertEqual(msg, "ok: 2 findings")
+        self.assertEqual({f.severity for f in found}, {"medium", "low"})
+        self.assertTrue(all(f.source == "nikto" for f in found))
+        self.assertIn("A02", {f.owasp for f in found})
+
+
 class Safety(unittest.TestCase):
     def test_remote_target_requires_authorization(self):
         with self.assertRaises(SystemExit):

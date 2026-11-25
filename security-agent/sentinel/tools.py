@@ -2,6 +2,7 @@
 not installed the agent records that it was skipped and continues."""
 from __future__ import annotations
 
+import csv
 import json
 import os
 import re
@@ -10,6 +11,7 @@ import shutil
 import subprocess  # nosec B404
 import tempfile
 from pathlib import Path
+from urllib.parse import urljoin
 
 from .findings import Finding
 
@@ -27,21 +29,25 @@ def nikto(url: str) -> tuple[list[Finding], str]:
     if not exe:
         return [], "skipped: nikto not installed (apt install nikto)"
     with tempfile.TemporaryDirectory() as d:
-        out = os.path.join(d, "nikto.json")
-        _run([exe, "-h", url, "-Format", "json", "-output", out, "-ask", "no", "-nointeractive", "-maxtime", "300s"])
+        out = os.path.join(d, "nikto.csv")
+        # CSV is supported by every Nikto version (JSON only from 2.5).
+        p = _run([exe, "-h", url, "-Format", "csv", "-output", out, "-ask", "no", "-maxtime", "300s"])
         try:
-            data = json.loads(Path(out).read_text())
-        except (OSError, ValueError):
-            return [], "error: nikto produced no JSON output"
-    hosts = data if isinstance(data, list) else [data]
+            text = Path(out).read_text("utf-8", "replace")
+        except OSError:
+            tail = " ".join((p.stderr or p.stdout).split())[-160:]
+            return [], f"error: nikto produced no output ({tail})"
     findings = []
-    for host in hosts:
-        for v in host.get("vulnerabilities", []):
-            msg = v.get("msg", "")
-            findings.append(Finding(
-                f"nikto.{v.get('id', '0')}", f"Nikto: {msg[:120]}", _nikto_owasp(msg), "medium" if "OSVDB" in msg else "low",
-                msg, "לבדוק את הממצא ולתקן לפי ההמלצה של Nikto.", source="nikto",
-                location=v.get("url", url)))
+    for row in csv.reader(text.splitlines()):
+        # host, ip, port, id/references, method, uri, message
+        if len(row) < 7 or row[0].lower() in ("host", "hostname") or not row[-1].strip():
+            continue
+        ref, uri, msg = row[3].strip(), row[5].strip(), row[-1].strip()
+        findings.append(Finding(
+            f"nikto.{ref or '0'}.{uri}", f"Nikto: {msg[:120]}", _nikto_owasp(msg),
+            "medium" if "OSVDB" in ref or "CVE" in msg else "low",
+            msg[:300], "לבדוק את הממצא ולתקן לפי ההמלצה של Nikto.", source="nikto",
+            location=urljoin(url, uri) if uri else url))
     return findings, f"ok: {len(findings)} findings"
 
 
