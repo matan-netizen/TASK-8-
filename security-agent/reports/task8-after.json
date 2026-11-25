@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "target": "http://localhost:3202",
+    "src": "TASK-8 (security-owasp-2025)",
+    "tools": {
+      "transport": "ok: 0 findings",
+      "headers": "ok: 0 findings",
+      "cookies": "ok: 0 findings",
+      "sensitive-files": "ok: 0 findings",
+      "cors": "ok: 0 findings",
+      "csrf": "ok: 0 findings",
+      "protected": "ok: 0 findings",
+      "forged-session": "ok: 0 findings",
+      "error-handling": "ok: 0 findings",
+      "rate-limit": "ok: 0 findings",
+      "nikto": "skipped: nikto not installed (apt install nikto)",
+      "http-requests": "30",
+      "bandit": "ok: 0 findings",
+      "npm-audit": "ok: 0 findings",
+      "secrets": "ok: 60 files scanned",
+      "ai-triage": "skipped: no findings"
+    },
+    "plan": [
+      "transport",
+      "headers",
+      "sensitive-files",
+      "cors",
+      "cookies",
+      "rate-limit",
+      "csrf",
+      "protected",
+      "forged-session",
+      "error-handling",
+      "nikto",
+      "bandit",
+      "npm-audit",
+      "secrets",
+      "ai-triage"
+    ]
+  },
+  "risk_score": 0,
+  "findings": [],
+  "ai_triage": null
+}
