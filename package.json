@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "eval": "tsx evals/run.mts"
+    "eval": "tsx evals/run.mts",
+    "audit": "npm audit --omit=dev --audit-level=moderate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
@@ -31,5 +32,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

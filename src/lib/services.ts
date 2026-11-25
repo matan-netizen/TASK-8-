@@ -12,6 +12,7 @@ import {
   type KnowledgeIndex,
 } from "./knowledge";
 import { getUser } from "./users";
+import { LIMITS, takeToken } from "./rate-limit";
 import {
   COMPLETION_MESSAGE,
   type ChatChannel,
@@ -33,6 +34,13 @@ export class AppError extends Error {
 }
 
 const now = () => new Date().toISOString();
+
+/** Each AI call costs money: cap calls per user (OWASP A06 / LLM10). */
+function requireAiBudget(user: User): void {
+  if (!takeToken(`ai:${user.id}`, LIMITS.ai())) {
+    throw new AppError(429, "יותר מדי בקשות ל-AI בדקה האחרונה. נסו שוב בעוד רגע.");
+  }
+}
 
 function requireRole(user: User | null, role: User["role"]): User {
   if (!user) throw new AppError(401, "יש להתחבר כדי להמשיך");
@@ -152,6 +160,7 @@ export async function createTask(
 ): Promise<{ task: Task; warning?: string }> {
   const manager = requireRole(user, "manager");
   const { description, project } = parse(createTaskSchema, input);
+  requireAiBudget(manager);
   const index = await safeIndex();
   const projectId =
     project === undefined ? (index ? detectProject(index, description) : null) : validProject(index, project);
@@ -303,6 +312,7 @@ export async function sendMessage(
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
   }));
 
+  requireAiBudget(user);
   const context: ChatContextTask =
     channel === "manager" ? task : (toEmployeeView(task) as ChatContextTask);
 

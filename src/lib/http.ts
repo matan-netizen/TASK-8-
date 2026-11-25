@@ -14,6 +14,11 @@ export async function handle<T>(fn: () => Promise<T>, status = 200): Promise<Nex
     return NextResponse.json(await fn(), { status });
   } catch (err) {
     if (err instanceof AppError) {
+      // Security logging (OWASP A09): denied and throttled requests are
+      // recorded without request bodies or task content.
+      if ([401, 403, 429].includes(err.status)) {
+        console.warn("[security] request denied", { status: err.status, reason: err.message });
+      }
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error("[api] unexpected error:", err);
